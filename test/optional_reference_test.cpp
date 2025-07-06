@@ -415,4 +415,50 @@ TEST(OptionalReference, ConstHandling)
     }
 }
 
+TEST(OptionalReference, AndThen)
+{
+    int val = 7;
+    OptionalReference<int> opt{val};
+    auto r = opt.and_then([](int& v) { return OptionalReference<int>(v); });
+    static_assert(std::is_same_v<decltype(r), OptionalReference<int>>);
+    ASSERT_TRUE(r.has_value());
+    EXPECT_EQ(&r.value(), &val);
+
+    OptionalReference<int> empty{};
+    bool called = false;
+    auto r2 = empty.and_then([&](int&) {
+        called = true;
+        return OptionalReference<int>{};
+    });
+    EXPECT_FALSE(called);
+    EXPECT_FALSE(r2.has_value());
+}
+
+TEST(OptionalReference, Transform)
+{
+    int val = 3;
+    OptionalReference<int> opt{val};
+    auto r = opt.transform([](int& v) { return v * 2; });
+    static_assert(std::is_same_v<decltype(r), std::optional<int>>);
+    ASSERT_TRUE(r.has_value());
+    EXPECT_EQ(*r, 6);
+
+    OptionalReference<int> empty{};
+    auto r2 = empty.transform([](int& v) { return v * 2; });
+    EXPECT_FALSE(r2.has_value());
+}
+
+TEST(OptionalReference, OrElse)
+{
+    int primary = 1;
+    int secondary = 2;
+    OptionalReference<int> opt{primary};
+    auto r = opt.or_else([&]() { return OptionalReference<int>(secondary); });
+    EXPECT_EQ(&r.value(), &primary);
+
+    OptionalReference<int> empty{};
+    auto r2 = empty.or_else([&]() { return OptionalReference<int>(secondary); });
+    EXPECT_EQ(&r2.value(), &secondary);
+}
+
 }  // namespace fixed_containers

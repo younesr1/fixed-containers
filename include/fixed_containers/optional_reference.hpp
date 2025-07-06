@@ -5,9 +5,11 @@
 #include "fixed_containers/source_location.hpp"
 
 #include <compare>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 namespace fixed_containers
 {
@@ -142,6 +144,139 @@ public:
     {
         val() = &val;
         return val;
+    }
+
+    // C++23 monadic operations
+    template <class F>
+    constexpr auto and_then(F&& f) &
+    {
+        using Result = std::invoke_result_t<F, T&>;
+        if (has_value())
+        {
+            return std::invoke(std::forward<F>(f), **this);
+        }
+        else
+        {
+            return Result{};
+        }
+    }
+
+    template <class F>
+    constexpr auto and_then(F&& f) const &
+    {
+        using Result = std::invoke_result_t<F, const T&>;
+        if (has_value())
+        {
+            return std::invoke(std::forward<F>(f), **this);
+        }
+        else
+        {
+            return Result{};
+        }
+    }
+
+    template <class F>
+    constexpr auto and_then(F&& f) &&
+    {
+        using Result = std::invoke_result_t<F, T>;
+        if (has_value())
+        {
+            return std::invoke(std::forward<F>(f), std::move(**this));
+        }
+        else
+        {
+            return Result{};
+        }
+    }
+
+    template <class F>
+    constexpr auto and_then(F&& f) const &&
+    {
+        using Result = std::invoke_result_t<F, const T>;
+        if (has_value())
+        {
+            return std::invoke(std::forward<F>(f), std::move(**this));
+        }
+        else
+        {
+            return Result{};
+        }
+    }
+
+    template <class F>
+    constexpr auto transform(F&& f) &
+    {
+        using Result = std::remove_cv_t<std::invoke_result_t<F, T&>>;
+        if (has_value())
+        {
+            return std::optional<Result>(std::invoke(std::forward<F>(f), **this));
+        }
+        else
+        {
+            return std::optional<Result>();
+        }
+    }
+
+    template <class F>
+    constexpr auto transform(F&& f) const &
+    {
+        using Result = std::remove_cv_t<std::invoke_result_t<F, const T&>>;
+        if (has_value())
+        {
+            return std::optional<Result>(std::invoke(std::forward<F>(f), **this));
+        }
+        else
+        {
+            return std::optional<Result>();
+        }
+    }
+
+    template <class F>
+    constexpr auto transform(F&& f) &&
+    {
+        using Result = std::remove_cv_t<std::invoke_result_t<F, T>>;
+        if (has_value())
+        {
+            return std::optional<Result>(std::invoke(std::forward<F>(f), std::move(**this)));
+        }
+        else
+        {
+            return std::optional<Result>();
+        }
+    }
+
+    template <class F>
+    constexpr auto transform(F&& f) const &&
+    {
+        using Result = std::remove_cv_t<std::invoke_result_t<F, const T>>;
+        if (has_value())
+        {
+            return std::optional<Result>(std::invoke(std::forward<F>(f), std::move(**this)));
+        }
+        else
+        {
+            return std::optional<Result>();
+        }
+    }
+
+    template <std::invocable F>
+    constexpr Self or_else(F&& f) const &
+    {
+        if (has_value())
+        {
+            return *this;
+        }
+        return std::forward<F>(f)();
+    }
+
+    template <std::invocable F>
+    constexpr Self or_else(F&& f) &&
+    {
+        if (has_value())
+        {
+            return std::move(*this);
+        }
+        return std::forward<F>(f)();
     }
 
 private:
